@@ -1,7 +1,7 @@
 # cv2のインポート前にカメラに関する設定を行う
 import os
 os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
-
+import pickle
 import socket
 #from tkinter import *
 import tkinter as tk
@@ -652,23 +652,23 @@ class MyApp(tk.Tk):
     def control(self, data):
         #time_sta = time.perf_counter()
 
-        HOST='192.168.11.26'
-        PORT=8080
+        HOST='192.168.1.102'
+        PORT=12345
         BUFFER=4096
             # Define socket communication type ipv4, tcp
-        soc=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.soc=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
             #connect to the server 
-        soc.connect((HOST,PORT))
+        self.soc.connect((HOST,PORT))
             #delay
         #time.sleep(1)
         if data == "exit":
             pass
         else:
             try:
-                soc.send(data.encode("utf-8"))
+                self.soc.send(data.encode("utf-8"))
             except ConnectionResetError:
                 pass
-        buf=soc.recv(BUFFER)
+        buf=self.soc.recv(BUFFER)
         
         #time_end = time.perf_counter()
         #tim = time_end - time_sta
@@ -724,7 +724,8 @@ class MyApp(tk.Tk):
 
     '''終了の関数'''
     def Finish(self):
-        self.control("fin")
+        self.control("q")
+        self.soc.close()
         #destroy()クラスメソッドでtkinterウィンドウを閉じる
         self.destroy()
         #sys.exit()
@@ -1029,23 +1030,19 @@ class MyApp(tk.Tk):
             
 '''周辺障害物の情報を受け取る関数'''
 def receive_laser_data():
-    global time_start
     while True:
-        HOST = '0.0.0.0'
-        PORT = 50000
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((HOST, PORT))
-            s.listen(1)  # 接続の待ち受け
-            #print('Waiting for connection...')
-            s.settimeout(1000)
-            conn, addr = s.accept()  # 接続されるまで待機
-            time_start = time.time()
-            data = conn.recv(1024)  # データの受信
-            array = struct.unpack('?' * (len(data) // struct.calcsize('?')), data)
-            #print(array)
+        try:
+            server_address = ('192.168.1.102', 50000)
+            client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket.connect(server_address)
+            received_data = client_socket.recv(1024)  # データの受信
+            array = pickle.loads(received_data)
+            print("障害物情報：", array)
             msg_q.put(array)
             #str_q.put(array)
             msg_q.join()
+        except EOFError:
+            continue
 
 '''ロボットの状態を受け取る関数'''
 def receive_state_data():
@@ -1077,11 +1074,13 @@ if __name__ == "__main__":
     
     thread2 = threading.Thread(target=receive_laser_data)
     thread2.start()
-    thread3 = threading.Thread(target=receive_state_data)
-    thread3.start()
-    root.disp_image()
+    #thread3 = threading.Thread(target=receive_state_data)
+    #thread3.start()
+    #root.disp_image()
     root.lock_button()
     root.determine_transition()
+    
+
     root.mainloop()
 
 
