@@ -674,7 +674,7 @@ class MyApp(tk.Tk):
         #tim = time_end - time_sta
         #print(tim)
 
-        print(buf)
+        #print(buf)
 
     '''ボタンごとの文字列を文字列送信用の関数controlに送る関数たち'''
     #ボタンforward
@@ -728,7 +728,7 @@ class MyApp(tk.Tk):
         self.soc.close()
         #destroy()クラスメソッドでtkinterウィンドウを閉じる
         self.destroy()
-        #sys.exit()
+        sys.exit()
 
     '''ボタンを貼り変える関数'''
     def delete_and_paste(self, laser_msg):
@@ -1037,7 +1037,7 @@ def receive_laser_data():
             client_socket.connect(server_address)
             received_data = client_socket.recv(1024)  # データの受信
             array = pickle.loads(received_data)
-            print("障害物情報：", array)
+            #print("障害物情報：", array)
             msg_q.put(array)
             #str_q.put(array)
             msg_q.join()
@@ -1046,22 +1046,19 @@ def receive_laser_data():
 
 '''ロボットの状態を受け取る関数'''
 def receive_state_data():
-    global state_flag
     while True:
-        HOST = '0.0.0.0'
-        PORT = 50010
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind((HOST, PORT))
-            s.listen(1)  # 接続の待ち受け
-            print('waiting state_data...')
-            s.settimeout(1000)
-            conn, addr = s.accept()  # 接続されるまで待機
-            data = conn.recv(1)  # データの受信
-            bool_value = struct.unpack('?', data)[0]
-            #print(bool_value)
+        try:
+            server_address_s = ('192.168.1.102', 50010)
+            client_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client_socket_s.connect(server_address_s)
+            received_data_s = client_socket_s.recv(1)
+            bool_value = struct.unpack('?', received_data_s)[0]
+            print(bool_value)
             #state_flag = bool_value
             state_q.put(bool_value)
             state_q.join()
+        except EOFError:
+            continue
 
 
 
@@ -1074,8 +1071,8 @@ if __name__ == "__main__":
     
     thread2 = threading.Thread(target=receive_laser_data)
     thread2.start()
-    #thread3 = threading.Thread(target=receive_state_data)
-    #thread3.start()
+    thread3 = threading.Thread(target=receive_state_data)
+    thread3.start()
     #root.disp_image()
     root.lock_button()
     root.determine_transition()
