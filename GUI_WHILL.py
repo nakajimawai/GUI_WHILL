@@ -167,6 +167,7 @@ class MyApp(tk.Tk):
             anchor=tk.CENTER
         )
 
+        self.cvs_menu.create_image(50, 552, image = self.img_warning, anchor = tk.CENTER)
 #------------------------------------------------------------------------
 #-----------------------------menu_back_frame------------------------------
 
@@ -301,6 +302,12 @@ class MyApp(tk.Tk):
             self.forward_frame,
             image=self.img_ccw_lock,
         )
+
+        #警告シンボル
+        self.img_ID_0 = self.cvs_forward.create_image(50, 50, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_2 = self.cvs_forward.create_image(1220, 50, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_4 = self.cvs_forward.create_image(1220, 222, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_10 = self.cvs_forward.create_image(50, 222, image = self.img_warning, anchor = tk.CENTER)
 #----------------------------------------------------------------------
 #-----------------------stop__forward_frame-------------------------------------
         #前方走行中の停止時フレームを作成
@@ -498,6 +505,12 @@ class MyApp(tk.Tk):
             self.back_frame,
             image=self.img_ccw_lock,
         )
+
+        #後方操作画面の警告シンボル
+        self.img_ID_4_B = self.cvs_back.create_image(50, 552, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_6_B = self.cvs_back.create_image(50, 50, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_8_B = self.cvs_back.create_image(1220, 50, image = self.img_warning, anchor = tk.CENTER)
+        self.img_ID_10_B = self.cvs_back.create_image(1220, 552, image = self.img_warning, anchor = tk.CENTER)
 #----------------------------------------------------------------------
 #-----------------------stop_back_frame-------------------------------------
         #後方走行中の停止時フレームを作成
@@ -636,11 +649,13 @@ class MyApp(tk.Tk):
 
         #画像描画
         if self.flag == 'F':
-            self.cvs_forward.create_image(0,0,anchor='nw',image=self.bg)
+            ID_F = self.cvs_forward.create_image(0,0,anchor='nw',image=self.bg)
+            self.cvs_forward.tag_lower(ID_F)
         elif self.flag == 'S_F':
             self.cvs_stop_forward.create_image(0,0,anchor='nw',image=self.bg)
         elif self.flag == 'B':
-            self.cvs_back.create_image(0,0,anchor='nw',image=self.bg)
+            ID_B = self.cvs_back.create_image(0,0,anchor='nw',image=self.bg)
+            self.cvs_back.tag_lower(ID_B)
         elif self.flag == 'S_B':
             self.cvs_stop_back.create_image(0,0,anchor='nw',image=self.bg)         
         elif self.flag == 'M_F':
@@ -992,7 +1007,57 @@ class MyApp(tk.Tk):
                 )
             ''''''
  
+    '''警告シンボルを表示・非表示する関数'''
+    def WARNING(self, laser_msg):
+        if self.flag == 'F':   #ユーザが前方操作画面を操作している時
+            #左前
+            if laser_msg[0]:
+                self.cvs_forward.itemconfigure(self.img_ID_0, state='normal')
+            elif not laser_msg[0]:
+                self.cvs_forward.itemconfigure(self.img_ID_0, state='hidden')
 
+            #右前
+            if laser_msg[2]:
+                self.cvs_forward.itemconfigure(self.img_ID_2, state='normal')
+            elif not laser_msg[2]:
+                self.cvs_forward.itemconfigure(self.img_ID_2, state='hidden')
+
+            #右
+            if laser_msg[4]:
+                self.cvs_forward.itemconfigure(self.img_ID_4, state='normal')
+            elif not laser_msg[4]:
+                self.cvs_forward.itemconfigure(self.img_ID_4, state='hidden')
+
+            #左
+            if laser_msg[10]:
+                self.cvs_forward.itemconfigure(self.img_ID_10, state='normal')
+            elif not laser_msg[10]:
+                self.cvs_forward.itemconfigure(self.img_ID_10, state='hidden')
+
+        elif self.flag == 'B':   #ユーザが後方操作画面を操作している時
+            #映像から見て左前
+            if laser_msg[6]:
+                self.cvs_back.itemconfigure(self.img_ID_6_B, state='normal')
+            elif not laser_msg[6]:
+                self.cvs_back.itemconfigure(self.img_ID_6_B, state='hidden')
+
+            #映像から見て右前
+            if laser_msg[8]:
+                self.cvs_back.itemconfigure(self.img_ID_8_B, state='normal')
+            elif not laser_msg[8]:
+                self.cvs_back.itemconfigure(self.img_ID_8_B, state='hidden')
+
+            #映像から見て右
+            if laser_msg[10]:
+                self.cvs_back.itemconfigure(self.img_ID_10_B, state='normal')
+            elif not laser_msg[10]:
+                self.cvs_back.itemconfigure(self.img_ID_10_B, state='hidden')
+
+            #映像から見て左
+            if laser_msg[4]:
+                self.cvs_back.itemconfigure(self.img_ID_4_B, state='normal')
+            elif not laser_msg[4]:
+                self.cvs_back.itemconfigure(self.img_ID_4_B, state='hidden')
     '''ボタンロック・アンロック用の関数'''
     def lock_button(self):
         global time_start
@@ -1001,6 +1066,7 @@ class MyApp(tk.Tk):
             laser_msg = msg_q.get(block=True, timeout=True)
             #print(laser_msg)
             self.delete_and_paste(laser_msg)
+            self.WARNING(laser_msg)
 
             #time_end = time.time()
             #exe_time = time_end - time_start
@@ -1041,7 +1107,7 @@ def receive_laser_data():
             client_socket.connect(server_address)
             received_data = client_socket.recv(1024)  # データの受信
             array = pickle.loads(received_data)
-            print("障害物情報：", array)
+            #print("障害物情報：", array)
             msg_q.put(array)
             #str_q.put(array)
             msg_q.join()
@@ -1077,7 +1143,7 @@ if __name__ == "__main__":
     thread2.start()
     thread3 = threading.Thread(target=receive_state_data)
     thread3.start()
-    #root.disp_image()
+    root.disp_image()
     root.lock_button()
     root.determine_transition()
     
