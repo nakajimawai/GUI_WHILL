@@ -167,7 +167,7 @@ class MyApp(tk.Tk):
             anchor=tk.CENTER
         )
 
-        self.cvs_menu.create_image(50, 552, image = self.img_warning, anchor = tk.CENTER)
+        #self.cvs_menu.create_image(50, 552, image = self.img_warning, anchor = tk.CENTER)
 #------------------------------------------------------------------------
 #-----------------------------menu_back_frame------------------------------
 
@@ -774,7 +774,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''cw旋回ボタンの処理'''
-            if laser_msg[3] or laser_msg[5]:
+            if laser_msg[3]:
                 #ボタン変更
                 self.button_f_cw.place_forget()
                 #貼り付け
@@ -784,7 +784,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[3] and not laser_msg[5]:
+            elif not laser_msg[3]:
                 #ボタン変更
                 self.button_f_cw_lock.place_forget()
                 #貼り付け
@@ -795,7 +795,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''ccw旋回ボタンの処理'''
-            if laser_msg[9] or laser_msg[11]:
+            if laser_msg[11]:
                 #ボタン変更
                 self.button_f_ccw.place_forget()
                 #貼り付け
@@ -805,7 +805,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[9] and not laser_msg[11]:
+            elif not laser_msg[11]:
                 #ボタン変更
                 self.button_f_ccw_lock.place_forget()
                 #貼り付け
@@ -839,7 +839,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''cw旋回ボタンの処理'''
-            if laser_msg[3] or laser_msg[5]:
+            if laser_msg[3]:
                 #ボタン変更
                 self.button_stop_f_cw.place_forget()
                 #貼り付け
@@ -849,7 +849,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[3] and not laser_msg[5]:
+            elif not laser_msg[3]:
                 #ボタン変更
                 self.button_stop_f_cw_lock.place_forget()
                 #貼り付け
@@ -860,7 +860,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''ccw旋回ボタンの処理'''
-            if laser_msg[9] or laser_msg[11]:
+            if laser_msg[11]:
                 #ボタン変更
                 self.button_stop_f_ccw.place_forget()
                 #貼り付け
@@ -870,7 +870,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[9] and not laser_msg[11]:
+            elif not laser_msg[11]:
                 #ボタン変更
                 self.button_stop_f_ccw_lock.place_forget()
                 #貼り付け
@@ -903,7 +903,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''cw旋回ボタンの処理'''
-            if laser_msg[3] or laser_msg[5]:
+            if laser_msg[3]:
                 #ボタン変更
                 self.button_b_cw.place_forget()
                 #貼り付け
@@ -912,7 +912,7 @@ class MyApp(tk.Tk):
                     y = 382,
                     anchor=tk.CENTER
                 )
-            elif not laser_msg[3] and not laser_msg[5]:
+            elif not laser_msg[3]:
                 #ボタン変更
                 self.button_b_cw_lock.place_forget()
                 #貼り付け
@@ -923,7 +923,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''ccw旋回ボタンの処理'''
-            if laser_msg[9] or laser_msg[11]:
+            if laser_msg[11]:
                 #ボタン変更
                 self.button_b_ccw.place_forget()
                 #貼り付け
@@ -933,7 +933,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[9] and not laser_msg[11]:
+            elif not laser_msg[11]:
                 #ボタン変更
                 self.button_b_ccw_lock.place_forget()
                 #貼り付け
@@ -966,7 +966,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''cw旋回ボタンの処理'''
-            if laser_msg[3] or laser_msg[5]:
+            if laser_msg[3]:
                 #ボタン変更
                 self.button_stop_b_cw.place_forget()
                 #貼り付け
@@ -975,7 +975,7 @@ class MyApp(tk.Tk):
                     y = 382,
                     anchor=tk.CENTER
                 )
-            elif not laser_msg[3] and not laser_msg[5]:
+            elif not laser_msg[3]:
                 #ボタン変更
                 self.button_stop_b_cw_lock.place_forget()
                 #貼り付け
@@ -986,7 +986,7 @@ class MyApp(tk.Tk):
                 )
             ''''''
             '''ccw旋回ボタンの処理'''
-            if laser_msg[9] or laser_msg[11]:
+            if laser_msg[11]:
                 #ボタン変更
                 self.button_stop_b_ccw.place_forget()
                 #貼り付け
@@ -996,7 +996,7 @@ class MyApp(tk.Tk):
                     anchor=tk.CENTER
                 )
                 
-            elif not laser_msg[9] and not laser_msg[11]:
+            elif not laser_msg[11]:
                 #ボタン変更
                 self.button_stop_b_ccw_lock.place_forget()
                 #貼り付け
@@ -1023,15 +1023,15 @@ class MyApp(tk.Tk):
                 self.cvs_forward.itemconfigure(self.img_ID_2, state='hidden')
 
             #右
-            if laser_msg[4]:
+            if laser_msg[4] or laser_msg[5]:
                 self.cvs_forward.itemconfigure(self.img_ID_4, state='normal')
-            elif not laser_msg[4]:
+            elif not laser_msg[4] and not laser_msg[5]:
                 self.cvs_forward.itemconfigure(self.img_ID_4, state='hidden')
 
             #左
-            if laser_msg[10]:
+            if laser_msg[9] or laser_msg[10]:
                 self.cvs_forward.itemconfigure(self.img_ID_10, state='normal')
-            elif not laser_msg[10]:
+            elif not laser_msg[9] and not laser_msg[10]:
                 self.cvs_forward.itemconfigure(self.img_ID_10, state='hidden')
 
         elif self.flag == 'B':   #ユーザが後方操作画面を操作している時
@@ -1048,17 +1048,17 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.img_ID_8_B, state='hidden')
 
             #映像から見て右
-            if laser_msg[10]:
+            if laser_msg[9] or laser_msg[10]:
                 self.cvs_back.itemconfigure(self.img_ID_10_B, state='normal')
-            elif not laser_msg[10]:
+            elif not laser_msg[9] and not laser_msg[10]:
                 self.cvs_back.itemconfigure(self.img_ID_10_B, state='hidden')
 
             #映像から見て左
-            if laser_msg[4]:
+            if laser_msg[4] or laser_msg[5]:
                 self.cvs_back.itemconfigure(self.img_ID_4_B, state='normal')
-            elif not laser_msg[4]:
+            elif not laser_msg[4] and not laser_msg[5]:
                 self.cvs_back.itemconfigure(self.img_ID_4_B, state='hidden')
-    '''ボタンロック・アンロック用の関数'''
+    '''ボタンロック・アンロックと警告シンボルの表示用の関数'''
     def lock_button(self):
         global time_start
         #print(arg)
@@ -1066,7 +1066,7 @@ class MyApp(tk.Tk):
             laser_msg = msg_q.get(block=True, timeout=True)
             #print(laser_msg)
             self.delete_and_paste(laser_msg)
-            self.WARNING(laser_msg)
+            #self.WARNING(laser_msg)
 
             #time_end = time.time()
             #exe_time = time_end - time_start
@@ -1143,7 +1143,7 @@ if __name__ == "__main__":
     thread2.start()
     thread3 = threading.Thread(target=receive_state_data)
     thread3.start()
-    root.disp_image()
+    #root.disp_image()
     root.lock_button()
     root.determine_transition()
     
