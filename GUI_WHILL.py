@@ -95,12 +95,10 @@ class MyApp(tk.Tk):
         self.img_ccw = Image.open('ccw_3d.png')
         self.img_ccw = self.img_ccw.resize((150, 200))
         self.img_ccw = ImageTk.PhotoImage(self.img_ccw)
-        ###シンボル作成###
         #後退シンボル
         self.img_back = Image.open('back_3d.png')
         self.img_back = self.img_back.resize((200, 100))
         self.img_back = ImageTk.PhotoImage(self.img_back)
-        ######
         #前進ロックシンボル
         self.img_forward_lock = Image.open('forward_3d_lock.png')
         self.img_forward_lock = self.img_forward_lock.resize((200, 100))
@@ -121,9 +119,8 @@ class MyApp(tk.Tk):
         self.img_warning = Image.open('warning.png')
         self.img_warning = self.img_warning.resize((100, 100))
         self.img_warning = ImageTk.PhotoImage(self.img_warning)      
-        ######
         
-#-----------------------------menu_frame------------------------------
+        #-----------------------------menu_frame------------------------------
 
         #前方画面フレーム作成
         self.menu_frame = ttk.Frame()
@@ -168,8 +165,8 @@ class MyApp(tk.Tk):
         )
 
         #self.cvs_menu.create_image(50, 552, image = self.img_warning, anchor = tk.CENTER)
-#------------------------------------------------------------------------
-#-----------------------------menu_back_frame------------------------------
+        #------------------------------------------------------------------------
+        #-----------------------------menu_back_frame------------------------------
 
         #後方メニューフレーム作成
         self.menu_back_frame = ttk.Frame()
@@ -212,7 +209,7 @@ class MyApp(tk.Tk):
             height=110,
             anchor=tk.CENTER
         )
-#-----------------------------forward_frame------------------------------
+        #-----------------------------forward_frame------------------------------
 
         #前方画面フレーム作成
         self.forward_frame = ttk.Frame()
@@ -308,8 +305,8 @@ class MyApp(tk.Tk):
         self.img_ID_2 = self.cvs_forward.create_image(1220, 50, image = self.img_warning, anchor = tk.CENTER)
         self.img_ID_4 = self.cvs_forward.create_image(1220, 222, image = self.img_warning, anchor = tk.CENTER)
         self.img_ID_10 = self.cvs_forward.create_image(50, 222, image = self.img_warning, anchor = tk.CENTER)
-#----------------------------------------------------------------------
-#-----------------------stop__forward_frame-------------------------------------
+        #----------------------------------------------------------------------
+        #-----------------------stop__forward_frame-------------------------------------
         #前方走行中の停止時フレームを作成
         self.stop_forward_frame = ttk.Frame()
         self.stop_forward_frame.grid(row=0, column=0, sticky="nsew")
@@ -415,8 +412,8 @@ class MyApp(tk.Tk):
             anchor=tk.CENTER
         )
         ''''''
-#--------------------------------------------------------------------------------------------------------
-#------------------------------------back_frame---------------------------------------------------------
+        #--------------------------------------------------------------------------------------------------------
+        #------------------------------------back_frame---------------------------------------------------------
         #後方画面フレーム作成
         self.back_frame = ttk.Frame()
         self.back_frame.grid(row=0, column=0, sticky="nsew")
@@ -511,8 +508,8 @@ class MyApp(tk.Tk):
         self.img_ID_6_B = self.cvs_back.create_image(50, 50, image = self.img_warning, anchor = tk.CENTER)
         self.img_ID_8_B = self.cvs_back.create_image(1220, 50, image = self.img_warning, anchor = tk.CENTER)
         self.img_ID_10_B = self.cvs_back.create_image(1220, 552, image = self.img_warning, anchor = tk.CENTER)
-#----------------------------------------------------------------------
-#-----------------------stop_back_frame-------------------------------------
+        #----------------------------------------------------------------------
+        #-----------------------stop_back_frame-------------------------------------
         #後方走行中の停止時フレームを作成
         self.stop_back_frame = ttk.Frame()
         self.stop_back_frame.grid(row=0, column=0, sticky="nsew")
@@ -617,13 +614,13 @@ class MyApp(tk.Tk):
             anchor=tk.CENTER
         )
         ''''''
-#--------------------------------------------------------------------------------------------------------
+        #--------------------------------------------------------------------------------------------------------
 
         #メニュー画面を最前面で表示
         self.menu_frame.tkraise()
         
                    
-    '''1フレーム分のデータを受け取って表示する'''
+    '''1フレーム分のデータを受け取って表示する関数'''
     def disp_image(self):
         global img_flag 
         '''canvasに画像を表示'''
@@ -641,7 +638,7 @@ class MyApp(tk.Tk):
         # NumPyのndarrayからPillowのImageへ変換
         pil_image = Image.fromarray(cv_image)
         
-        #画面のサイズにリサイズ
+        #画面のサイズにリサイズ0
         pil_image = pil_image.resize((1275, 765))
 
         #PIL.ImageからPhotoImageへ変換する
@@ -700,13 +697,13 @@ class MyApp(tk.Tk):
     def forward(self):
         print("前進")
         self.control("w")
-    #ボタンright
+    #ボタンcw旋回
     def cw(self):
-        print("右旋回")
+        print("cw旋回")
         self.control("d")
-    #ボタンforward
+    #ボタンccw
     def ccw(self):
-        print("左旋回")
+        print("ccw旋回")
         self.control("a")
     #ボタンstop
     def stop(self):
@@ -716,10 +713,11 @@ class MyApp(tk.Tk):
     def back(self):
         print("後進")
         self.control("x")
+
     '''後方走行時 → メニュー画面 → 走行開始 を選んだ場合も後方カメラ映像を映すための関数'''
     def start_running(self):
         print("走行開始")
-        #self.control("run")
+        self.control("run")
         if self.flag == "M_F":
             self.arg = True
             self.stop_forward_frame.tkraise()
@@ -1060,19 +1058,17 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.img_ID_4_B, state='hidden')
     '''ボタンロック・アンロックと警告シンボルの表示用の関数'''
     def lock_button(self):
-        global time_start
-        #print(arg)
         if not msg_q.empty():   #障害物情報に変化があったとき
             laser_msg = msg_q.get(block=True, timeout=True)
             #print(laser_msg)
             self.delete_and_paste(laser_msg)
-            #self.WARNING(laser_msg)
+            self.WARNING(laser_msg)
 
             #time_end = time.time()
             #exe_time = time_end - time_start
             #print("処理時間: {:.10f} seconds".format(exe_time))
 
-            self.str = laser_msg   #前回の障害物情報を保持
+            self.str = laser_msg   #遷移後の画面でもシンボルロックするために前回の障害物情報を保持
             msg_q.task_done()
 
         if self.arg == True:   #画面遷移が行われたとき
@@ -1143,7 +1139,7 @@ if __name__ == "__main__":
     thread2.start()
     thread3 = threading.Thread(target=receive_state_data)
     thread3.start()
-    #root.disp_image()
+    root.disp_image()
     root.lock_button()
     root.determine_transition()
     
