@@ -11,6 +11,11 @@ import threading, queue
 q = queue.Queue()       #受信する画像データをスレッド間で共有するためのキュー
 msg_q = queue.Queue()   #障害物情報を保持するキュー
 state_q = queue.Queue() #ロボットの状態を保持するキュー
+
+# グローバル変数としてソケットを定義
+client_socket = None
+client_socket_s = None
+
 img_flag = 'M_F'   #前方カメラか後方カメラ、どちらを受け取る画像データにするか判断するための変数（F：前方、B：後方、M：Menu、S：停止中）
 
 state_flag = False   #衝突防止動作によってロボットが停止したかどうかを判断するブール値(False：停止, True：動作中)
@@ -905,11 +910,6 @@ class MyApp(tk.Tk):
         self.blink_state = False # 点滅の状態を制御するフラグ
         self.blinking_img_id = None
         self.blink_job = None
-
-        self.cvs_forward.itemconfigure(self.id_F_cw, state = 'hidden') 
-        self.cvs_forward.itemconfigure(self.id_F_ccw, state = 'hidden') 
-        self.cvs_forward.itemconfigure(self.id_lock_F_cw, state = 'normal')
-        self.cvs_forward.itemconfigure(self.id_lock_F_ccw, state = 'normal')
 
     '''シンボル画像の余白部分クリックのスルー用関数群'''
     #----------------------------------------------------------------------------
