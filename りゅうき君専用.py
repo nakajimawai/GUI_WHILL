@@ -14,7 +14,13 @@ msg_q = queue.Queue()   #障害物情報を保持するキュー
 
 state_q = queue.Queue() #ロボットの状態を保持するキュー
 
+# グローバル変数としてソケットを定義
+client_socket = None
+client_socket_s = None
+
 img_flag = 'M_F'   #前方カメラか後方カメラ、どちらを受け取る画像データにするか判断するための変数（F：前方、B：後方、M：Menu、S：停止中）
+
+state_flag = False   #衝突防止動作によってロボットが停止したかどうかを判断するブール値(False：停止, True：動作中)
 
 class MyApp(tk.Tk):
 
@@ -52,21 +58,39 @@ class MyApp(tk.Tk):
         #走行開始シンボル
         self.img_start = Image.open('start.png')
         self.img_start = self.img_start.resize((int(200 * W), int(200 * H)))
-        #終了シンボル
+        self.img_start = self.img_start.convert("RGBA")
+        self.img_start = self.apply_transparency(self.img_start, self.alpha)
+        self.img_start_tk = ImageTk.PhotoImage(self.img_start)
+        # 終了シンボル
         self.img_finish = Image.open('finish_letter.png')
         self.img_finish = self.img_finish.resize((150, 100))
-        #メニューへの画面遷移シンボル
+        self.img_finish = self.img_finish.convert("RGBA")
+        self.img_finish = self.apply_transparency(self.img_finish, self.alpha)
+        self.img_finish_tk = ImageTk.PhotoImage(self.img_finish)
+        # メニューへの画面遷移シンボル
         self.img_menu = Image.open('menu.png')
         self.img_menu = self.img_menu.resize((200, 100))
+        self.img_menu = self.img_menu.convert("RGBA")
+        self.img_menu = self.apply_transparency(self.img_menu, self.alpha)
+        self.img_menu_tk = ImageTk.PhotoImage(self.img_menu)
         #前進シンボル
         self.img_forward = Image.open('forward_3d.png')
         self.img_forward = self.img_forward.resize((int(200 * W), int(200 * H)))
+        self.img_forward = self.img_forward.convert("RGBA")
+        self.img_forward = self.apply_transparency(self.img_forward, self.alpha)
+        self.img_forward_tk = ImageTk.PhotoImage(self.img_forward)
         #停止シンボル
         self.img_stop = Image.open('stop_3d.png')
         self.img_stop = self.img_stop.resize((int(200 * W), int(200 * H)))
+        self.img_stop = self.img_stop.convert("RGBA")
+        self.img_stop = self.apply_transparency(self.img_stop, self.alpha)
+        self.img_stop_tk = ImageTk.PhotoImage(self.img_stop)
         #前進ロックシンボル
-        self.img_forward_lock = Image.open('forward_3d_lock.png')
-        self.img_forward_lock = self.img_forward_lock.resize((int(200 * W), int(200 * H)))
+        self.img_lock_forward = Image.open('forward_3d_lock.png')
+        self.img_lock_forward = self.img_lock_forward.resize((int(200 * W), int(200 * H)))
+        self.img_lock_forward = self.img_lock_forward.convert("RGBA")
+        self.img_lock_forward = self.apply_transparency(self.img_lock_forward, self.alpha)
+        self.img_lock_forward_tk = ImageTk.PhotoImage(self.img_lock_forward)
         ''''''
 
         #-----------------------------menu_frame------------------------------
@@ -83,14 +107,88 @@ class MyApp(tk.Tk):
             bordermode=tk.OUTSIDE
         )
         
-        #走行開始シンボル
-        self.img_start, id_start = self.make_transparent_button(self.img_start, self.cvs_menu, 637, 350, self.alpha)
-        self.cvs_menu.tag_bind(id_start, '<Button-1>', lambda e: self.start_running())
+        # 走行開始シンボル
+        self.id_menu = self.cvs_menu.create_image(
+            637,
+            350,
+            image = self.img_start_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu.tag_bind(
+            self.id_menu,
+            '<Button-1>',
+            lambda e: [self.start_running()]
+            )
         
-        #終了シンボル
-        self.img_finish, id_finish = self.make_transparent_button(self.img_finish, self.cvs_menu, 1195, 720, self.alpha)
-        self.cvs_menu.tag_bind(id_finish, '<Button-1>', lambda e: self.Finish())
+        # 終了シンボル
+        self.id_finish = self.cvs_menu.create_image(
+            1195,
+            720,
+            image = self.img_finish_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu.tag_bind(
+            self.id_finish,
+            '<Button-1>',
+            lambda e: [self.Finish()]
+            )
+        #-----------------------stop__forward_frame-------------------------------------
+        #前方走行中の停止時フレームを作成
+        self.stop_forward_frame = ttk.Frame()
+        self.stop_forward_frame.grid(row=0, column=0, sticky="nsew")
 
+        ###背景画像用のキャンバス###
+        self.cvs_stop_forward = tk.Canvas(self.stop_forward_frame,width=1275,height=765)
+        self.cvs_stop_forward.place(
+            relx=0,
+            rely=0,
+            bordermode=tk.OUTSIDE
+        )
+
+        ###シンボル設置###
+        
+        '''ロックシンボル'''
+        #停止画面の前進ロックシンボル
+        self.id_lock_S_F_forward = self.cvs_stop_forward.create_image(
+            337,
+            383,
+            image = self.img_lock_forward_tk,
+            anchor = tk.CENTER,
+            tag = "lock_S_F_forward"
+        )
+        
+        ''''''
+        '''ロボット操縦シンボル'''
+        # 前進シンボル
+        self.id_S_F_forward = self.cvs_stop_forward.create_image(
+            337,
+            383,
+            image = self.img_forward_tk,
+            anchor = tk.CENTER,
+            tag = "S_F_forward"
+        )
+        self.cvs_stop_forward.tag_bind(
+            self.id_S_F_forward,
+            '<Button-1>',
+            lambda e: [self.changePage(self.forward_frame), self.change_frame_flag("F"), self.forward()]
+            #lambda e: [self.change_frame_flag("F"), self.forward(), self.start_blinking(self.id_forward), self.changePage(self.forward_frame)]
+            )
+
+        ''''''        
+        '''ロボット操作以外のシンボル'''
+        # メニュー画面に遷移するシンボル
+        self.id_change_menu = self.cvs_stop_forward.create_image(
+            110,
+            682,
+            image = self.img_menu_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_stop_forward.tag_bind(
+            self.id_change_menu,
+            '<Button-1>',
+            lambda e: [self.changePage(self.menu_frame), self.change_frame_flag("M_F")]
+            )
+        ''''''
         #-----------------------------forward_frame------------------------------
 
         #前方画面フレーム作成
@@ -106,93 +204,40 @@ class MyApp(tk.Tk):
         )
 
         ###シンボル設置###
-        #停止シンボル
-        self.img_stop, id_stop = self.make_transparent_button(self.img_stop, self.cvs_forward, 957, 383, self.alpha)
+        '''ロボット操縦シンボル'''
+        # 停止シンボル
+        self.id_F_stop = self.cvs_forward.create_image(
+            957,
+            383,
+            image = self.img_stop_tk,
+            anchor = tk.CENTER,
+            tag = "stop"
+        )
         self.cvs_forward.tag_bind(
-            id_stop,
+            self.id_F_stop,
             '<Button-1>',
-            lambda e: [self.changePage(self.stop_forward_frame), self.change_frame_flag("S_F"), self.stop()]
+            lambda e: [self.change_frame_flag("S_F"), self.stop(), self.changePage(self.stop_forward_frame)]
             )
 
-        #-----------------------stop__forward_frame-------------------------------------
-        #前方走行中の停止時フレームを作成
-        self.stop_forward_frame = ttk.Frame()
-        self.stop_forward_frame.grid(row=0, column=0, sticky="nsew")
-
-        ###背景画像用のキャンバス###
-        self.cvs_stop_forward = tk.Canvas(self.stop_forward_frame,width=1275,height=765)
-        self.cvs_stop_forward.place(
-            relx=0,
-            rely=0,
-            bordermode=tk.OUTSIDE
-        )
-
-        ###シンボル設置###
-
-        '''ロボット操作シンボル'''
-        #停止画面の前進シンボル
-        #self.img_forward, id_forward = self.make_transparent_button(self.img_forward, self.cvs_stop_forward, 337, 383, self.alpha)
-
-        # ロック・アンロックが繰り返し行えるように個別でタグ付け
-        self.img_forward = self.img_forward.convert("RGBA")
-        self.img_forward.putalpha(self.alpha)
-        self.img_forward_tk = ImageTk.PhotoImage(self.img_forward)
-        id_S_F_forward = self.cvs_stop_forward.create_image(
-            337,
-            383,
-            image = self.img_forward_tk,
-            anchor = tk.CENTER,
-            tag = "S_F_forward"
-        )
-        self.cvs_stop_forward.tag_bind(
-            id_S_F_forward,
-            '<Button-1>',
-            lambda e: [self.changePage(self.forward_frame), self.change_frame_flag("F"), self.forward()]
-            )
-
-        ''''''
-        '''ロックシンボル'''
-        #停止画面の前進ロックシンボル
-        
-        # ロック・アンロックが繰り返し行えるように個別でタグ付け
-        self.img_forward_lock = self.img_forward_lock.convert("RGBA")
-        self.img_forward_lock.putalpha(self.alpha)
-        self.img_forward_lock_tk = ImageTk.PhotoImage(self.img_forward_lock)
-        self.cvs_stop_forward.create_image(
-            337,
-            383,
-            image = self.img_forward_lock_tk,
-            anchor = tk.CENTER,
-            tag = "S_F_forward_lock"
-        )
-        
-        ''''''
-        '''ロボット操作以外のシンボル'''
-        #メニューへのシンボル
-        self.img_menu, id_menu = self.make_transparent_button(self.img_menu, self.cvs_stop_forward, 110, 682, self.alpha)
-        self.cvs_stop_forward.tag_bind(
-            id_menu,
-            '<Button-1>',
-            lambda e: [self.changePage(self.menu_frame), self.change_frame_flag("M_F")]
-            )
-        ''''''
         #--------------------------------------------------------------------------------------------------------
 
         #メニュー画面を最前面で表示
         self.menu_frame.tkraise()
 
     '''シンボルを透明にする関数'''
-    def make_transparent_button(self, img, canvas, x, y, ALPHA):
+    def apply_transparency(self, img, alpha):
         img = img.convert("RGBA")
-        img.putalpha(ALPHA)
-        img = ImageTk.PhotoImage(img)
-        id = canvas.create_image(
-            x,
-            y,
-            image = img,
-            anchor = tk.CENTER
-        )
-        return img ,id
+        datas = img.getdata()
+
+        newData = []
+        for item in datas:
+            if item[3] > 0:  # シンボル部分のみに透明度を追加
+                newData.append((item[0], item[1], item[2], alpha))
+            else:
+                newData.append((item[0], item[1], item[2], 0)) # 画像余白部分は透明度0（完全に透明）
+
+        img.putdata(newData)
+        return img
 
     '''シンボルサイズのコンフィグレーションファイルを詠み込む関数'''
     def read_config(self, filepath):
@@ -307,8 +352,12 @@ class MyApp(tk.Tk):
     '''終了の関数'''
     def Finish(self):
         print("終了")
-        #self.control("q")
-        #self.soc.close()
+        self.control("q")
+        self.soc.close()
+        if client_socket:
+            client_socket.close()
+        if client_socket_s:
+            client_socket_s.close()
         self.destroy()#destroy()クラスメソッドでtkinterウィンドウを閉じる
         sys.exit()
 
@@ -316,39 +365,18 @@ class MyApp(tk.Tk):
     def delete_and_paste(self, laser_msg):
 
         if self.flag == 'S_F':   #ユーザが前方停止画面を操作している時
-            '''前進シンボルの処理'''
+            # 前進シンボルの処理
+            
             if laser_msg[1] == True:
-                #前進シンボル削除
-                self.cvs_stop_forward.delete("S_F_forward")
-                self.cvs_stop_forward.delete("S_F_forward_lock")
-                #前進ロックシンボル貼り付け
-                self.cvs_stop_forward.create_image(
-                337,
-                383,
-                image = self.img_forward_lock_tk,
-                anchor = tk.CENTER,
-                tag = "S_F_forward_lock"
-                )                
-                
-            elif laser_msg[1] == False:
-                #前進ロックシンボル削除
-                self.cvs_stop_forward.delete("S_F_forward")
-                self.cvs_stop_forward.delete("S_F_forward_lock")
-                #前進シンボル貼り付け
-                id_S_F_forward = self.cvs_stop_forward.create_image(
-                337,
-                383,
-                image = self.img_forward_tk,
-                anchor = tk.CENTER,
-                tag = "S_F_forward"
-                )
-                #前進シンボルに関数をバインド
-                self.cvs_stop_forward.tag_bind(id_S_F_forward, '<Button-1>', lambda e: [self.changePage(self.forward_frame), self.change_frame_flag("F"), self.forward()]) 
-            ''''''
+                self.cvs_stop_forward.itemconfigure(self.id_S_F_forward, state = 'hidden') # 前進シンボルを非表示
+                self.cvs_stop_forward.itemconfigure(self.id_lock_S_F_forward, state = 'normal') # 前進ロックシンボルを表示
+            else:
+                self.cvs_stop_forward.itemconfigure(self.id_S_F_forward, state = 'normal') # 前進シンボルを表示
+                self.cvs_stop_forward.itemconfigure(self.id_lock_S_F_forward, state = 'hidden') # 前進ロックシンボルを非表示
 
 
-    '''ボタンロック・アンロック関数'''
-    def lock_button(self):
+    '''シンボルロック・アンロック関数'''
+    def lock_symbol(self):
         if not msg_q.empty():   #障害物情報に変化があったとき
             laser_msg = msg_q.get(block=True, timeout=True)
             self.delete_and_paste(laser_msg)
@@ -360,7 +388,7 @@ class MyApp(tk.Tk):
             self.delete_and_paste(self.str)
             self.arg = False
 
-        self.after(10, self.lock_button)
+        self.after(10, self.lock_symbol)
 
     '''衝突防止動作によって停止画面に遷移させるかを判断する関数'''
     def determine_transition(self):
@@ -377,6 +405,7 @@ class MyApp(tk.Tk):
 
 '''周辺障害物の情報を受け取る関数'''
 def receive_laser_data():
+    global client_socket
     while True:
         try:
             server_address = ('192.168.1.102', 50000)
@@ -391,6 +420,7 @@ def receive_laser_data():
 
 '''ロボットの状態を受け取る関数'''
 def receive_state_data():
+    global client_socket_s
     while True:
         try:
             server_address_s = ('192.168.1.102', 50010)
@@ -414,7 +444,7 @@ if __name__ == "__main__":
     thread3.start()
 
     root.disp_image()
-    root.lock_button()
-    #root.determine_transition()
+    root.lock_symbol()
+    root.determine_transition()
 
     root.mainloop()
