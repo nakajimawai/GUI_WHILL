@@ -16,9 +16,9 @@ state_q = queue.Queue() #ロボットの状態を保持するキュー
 client_socket = None
 client_socket_s = None
 
-img_flag = 'M_F'   #前方カメラか後方カメラ、どちらを受け取る画像データにするか判断するための変数（F：前方、B：後方、M：Menu、S：停止中）
-
 state_flag = False   #衝突防止動作によってロボットが停止したかどうかを判断するブール値(False：停止, True：動作中)
+
+mode_flag = True # ユーザ操縦モードか介助者操縦モードかを判断するための変数（True：ユーザ操縦モード、False：介助者操縦モード）
 
 class MyApp(tk.Tk):
     '''ボタンやキャンバスの設定、表示'''
@@ -38,6 +38,8 @@ class MyApp(tk.Tk):
         self.arg = False   #画面遷移したかどうか
 
         self.str_state = False   #衝突防止動作の実行前にロボットが動いていたかを判断する
+
+        global mode_flag
 
         # 前方、後方カメラをオープンする
         self.capture_F = cv2.VideoCapture(1)
@@ -86,6 +88,18 @@ class MyApp(tk.Tk):
         self.img_menu = self.img_menu.convert("RGBA")
         self.img_menu = self.apply_transparency(self.img_menu, self.alpha)
         self.img_menu_tk = ImageTk.PhotoImage(self.img_menu)
+       # 介助者操縦モードのシンボル
+        self.img_helper = Image.open('helper.png')
+        self.img_helper = self.img_helper.resize((200, 100))
+        self.img_helper = self.img_helper.convert("RGBA")
+        self.img_helper = self.apply_transparency(self.img_helper, self.alpha)
+        self.img_helper_tk = ImageTk.PhotoImage(self.img_helper)
+        # ユーザ操縦モードのシンボル
+        self.img_user = Image.open("user.png")
+        self.img_user = self.img_user.resize((200, 100))
+        self.img_user = self.img_user.convert("RGBA")
+        self.img_user = self.apply_transparency(self.img_user, self.alpha)
+        self.img_user_tk = ImageTk.PhotoImage(self.img_user)
         # 前進シンボル
         self.img_forward = Image.open('forward_joy.png')
         self.img_forward = self.img_forward.resize((int(130 * W), int(105 * H)))
@@ -255,6 +269,19 @@ class MyApp(tk.Tk):
             lambda e: [self.Finish()]
             )
 
+        # 介助者操縦モードシンボル
+        self.id_F_helper = self.cvs_menu.create_image(
+            300,
+            720,
+            image = self.img_helper_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu.tag_bind(
+            self.id_F_helper,
+            '<Button-1>',
+            lambda e: [self.changePage(self.menu_helper_F_frame), self.change_frame_flag("H_F"), self.helper()]
+            )
+
         #-----------------------------back_menu_frame------------------------------
         #後方メニュー画面フレーム作成
         self.menu_back_frame = ttk.Frame()
@@ -293,6 +320,123 @@ class MyApp(tk.Tk):
             '<Button-1>',
             lambda e: [self.Finish()]
             )
+
+        # 介助者操縦モードシンボル
+        self.id_B_helper = self.cvs_menu_back.create_image(
+            300,
+            720,
+            image = self.img_helper_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_back.tag_bind(
+            self.id_B_helper,
+            '<Button-1>',
+            lambda e: [self.changePage(self.menu_helper_B_frame), self.change_frame_flag("H_B"), self.helper()]
+            )
+
+        #-----------------------------menu_helper_F_frame------------------------------
+        #介助者前方画面フレーム作成
+        self.menu_helper_F_frame = ttk.Frame()
+        self.menu_helper_F_frame.grid(row=0, column=0, sticky="nsew")
+
+        ###背景画像用のキャンバス###
+        self.cvs_menu_helper_F = tk.Canvas(self.menu_helper_F_frame,width=1275,height=765)
+        self.cvs_menu_helper_F.place(
+            relx=0,
+            rely=0,
+            bordermode=tk.OUTSIDE
+        )
+
+        # 走行開始シンボル
+        self.id_start_helper_F = self.cvs_menu_helper_F.create_image(
+            637,
+            350,
+            image = self.img_start_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_F.tag_bind(
+            self.id_start_helper_F,
+            '<Button-1>',
+            lambda e: [self.start_running()]
+            )
+
+        # 終了シンボル
+        self.id_finish_helper_F = self.cvs_menu_helper_F.create_image(
+            1195,
+            720,
+            image = self.img_finish_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_F.tag_bind(
+            self.id_finish_helper_F,
+            '<Button-1>',
+            lambda e: [self.Finish()]
+            )
+
+        # ユーザ操縦モードシンボル
+        self.id_F_user = self.cvs_menu_helper_F.create_image(
+            100,
+            720,
+            image = self.img_user_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_F.tag_bind(
+            self.id_F_user,
+            '<Button-1>',
+            lambda e: [self.changePage(self.menu_frame), self.change_frame_flag("M_F"), self.user()]
+            )        
+
+        #-----------------------------menu_helper_B_frame------------------------------
+        #前方画面フレーム作成
+        self.menu_helper_B_frame = ttk.Frame()
+        self.menu_helper_B_frame.grid(row=0, column=0, sticky="nsew")
+
+        ###背景画像用のキャンバス###
+        self.cvs_menu_helper_B = tk.Canvas(self.menu_helper_B_frame,width=1275,height=765)
+        self.cvs_menu_helper_B.place(
+            relx=0,
+            rely=0,
+            bordermode=tk.OUTSIDE
+        )
+
+        # 走行開始シンボル
+        self.id_start_helper_B = self.cvs_menu_helper_B.create_image(
+            637,
+            350,
+            image = self.img_strat_back_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_B.tag_bind(
+            self.id_start_helper_B,
+            '<Button-1>',
+            lambda e: [self.start_running()]
+            )
+
+        # 終了シンボル
+        self.id_finish_helper_B = self.cvs_menu_helper_B.create_image(
+            1195,
+            720,
+            image = self.img_finish_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_B.tag_bind(
+            self.id_finish_helper_B,
+            '<Button-1>',
+            lambda e: [self.Finish()]
+            )
+
+        # ユーザ操縦モードシンボル
+        self.id_B_user = self.cvs_menu_helper_B.create_image(
+            100,
+            720,
+            image = self.img_user_tk,
+            anchor = tk.CENTER,
+        )
+        self.cvs_menu_helper_B.tag_bind(
+            self.id_B_user,
+            '<Button-1>',
+            lambda e: [self.changePage(self.menu_back_frame), self.change_frame_flag("M_B"), self.user()]
+            )        
 
         #-----------------------stop__forward_frame-------------------------------------
         #前方の停止時フレームを作成
@@ -453,7 +597,7 @@ class MyApp(tk.Tk):
         self.cvs_stop_forward.tag_bind(
             self.id_change_menu,
             '<Button-1>',
-            lambda e: [self.changePage(self.menu_frame), self.change_frame_flag("M_F")]
+            lambda e: [self.menu()]
             )
 
         #-----------------------stop__back_frame-------------------------------------
@@ -611,7 +755,7 @@ class MyApp(tk.Tk):
         self.cvs_stop_back.tag_bind(
             self.id_change_menu_back,
             '<Button-1>',
-            lambda e: [self.changePage(self.menu_back_frame), self.change_frame_flag("M_B")]
+            lambda e: [self.menu()]
             )
 
      #-----------------------forward_frame-------------------------------------
@@ -1295,14 +1439,13 @@ class MyApp(tk.Tk):
 
     '''1フレーム分のデータを受け取って表示する関数'''
     def disp_image(self):
-        global img_flag 
         '''canvasに画像を表示'''
 
         #前方カメラか後方カメラどちらかの映像をフラグの状態によって取得
-        if img_flag == "F" or img_flag == "S_F" or img_flag == "M_F":
+        if self.flag == "F" or self.flag == "S_F" or self.flag == "M_F" or self.flag == "H_F":
             ret, data = self.capture_F.read()
     
-        elif img_flag == "B" or img_flag == "S_B" or img_flag == "M_B":
+        elif self.flag == "B" or self.flag == "S_B" or self.flag == "M_B" or self.flag == "H_B":
             ret, data = self.capture_B.read()            
 
         # BGR→RGB変換
@@ -1336,16 +1479,19 @@ class MyApp(tk.Tk):
         elif self.flag == 'M_B':
             self.cvs_menu_back.create_image(0,0,anchor='nw',image=self.bg, tag = "background")
             self.cvs_menu_back.tag_lower('background')          
-            
-            #画像更新のために10msスレッドを空ける
+        elif self.flag == 'H_F': # 介助者操縦モードの前方メニュー画面
+            self.cvs_menu_helper_F.create_image(0,0,anchor='nw',image=self.bg, tag = "background")
+            self.cvs_menu_helper_F.tag_lower('background')
+        elif self.flag == 'H_B': # 介助者操縦モードの後方メニュー画面
+            self.cvs_menu_helper_B.create_image(0,0,anchor='nw',image=self.bg, tag = "background")
+            self.cvs_menu_helper_B.tag_lower('background')            
+
+        #画像更新のために10msスレッドを空ける
         self.after(10, self.disp_image)
 
     '''フレームごとで映像を表示し続けるために、フラグを変更する関数'''
     def change_frame_flag(self, frame_flag):
-        global img_flag
-
         self.flag = frame_flag
-        img_flag = frame_flag
 
     '''画面遷移用の関数'''
     def changePage(self, page):
@@ -1439,7 +1585,7 @@ class MyApp(tk.Tk):
                 self.cvs_stop_back.itemconfigure(self.id_lock_S_B_right_diagonal_back, state = 'hidden') # 右斜め後移動ロックシンボルを非表示
 
             # cw旋回シンボルの処理
-            if laser_msg[6] == True:
+            if laser_msg[3] == True:
                 self.cvs_stop_back.itemconfigure(self.id_S_B_cw, state = 'hidden') # cw旋回シンボルを非表示
                 self.cvs_stop_back.itemconfigure(self.id_lock_S_B_cw, state = 'normal') # cw旋回ロックシンボルを表示
             else:
@@ -1447,7 +1593,7 @@ class MyApp(tk.Tk):
                 self.cvs_stop_back.itemconfigure(self.id_lock_S_B_cw, state = 'hidden') # cw旋回ロックシンボルを非表示
 
             # ccw旋回シンボルの処理
-            if laser_msg[4] == True:
+            if laser_msg[9] == True:
                 self.cvs_stop_back.itemconfigure(self.id_S_B_ccw, state = 'hidden') # ccw旋回シンボルを非表示
                 self.cvs_stop_back.itemconfigure(self.id_lock_S_B_ccw, state = 'normal') # ccw旋回ロックシンボルを表示
             else:
@@ -1523,7 +1669,7 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.id_lock_B_right_diagonal_back, state = 'hidden') # 右斜め後移動ロックシンボルを非表示
 
             # cw旋回シンボルの処理
-            if laser_msg[8] == True:
+            if laser_msg[3] == True:
                 self.cvs_back.itemconfigure(self.id_B_cw, state = 'hidden') # cw旋回シンボルを非表示
                 self.cvs_back.itemconfigure(self.id_lock_B_cw, state = 'normal') # cw旋回ロックシンボルを表示
             else:
@@ -1531,7 +1677,7 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.id_lock_B_cw, state = 'hidden') # cw旋回ロックシンボルを非表示
 
             # ccw旋回シンボルの処理
-            if laser_msg[4] == True:
+            if laser_msg[9] == True:
                 self.cvs_back.itemconfigure(self.id_B_ccw, state = 'hidden') # ccw旋回シンボルを非表示
                 self.cvs_back.itemconfigure(self.id_lock_B_ccw, state = 'normal') # ccw旋回ロックシンボルを表示
             else:
@@ -1625,15 +1771,46 @@ class MyApp(tk.Tk):
         print("停止")
         self.control("s")
 
+    def helper(self):
+        print("介助者操縦モード")
+        global mode_flag
+        mode_flag = False
+        self.control("helper")
+
+    def user(self):
+        print("ユーザ操縦モード")
+        global mode_flag
+        mode_flag = True
+        self.control("user")
+
+    def menu(self):
+        global mode_flag
+        if mode_flag:
+            print("ユーザ操縦モードのメニュー画面へ")
+            if self.flag =='S_F':
+                self.changePage(self.menu_frame)
+                self.change_frame_flag("M_F")
+            else:
+                self.changePage(self.menu_back_frame)
+                self.change_frame_flag("M_B")
+        else:
+            print("介助者操縦モードのメニュー画面へ")
+            if self.flag == 'S_F':
+                self.changePage(self.menu_helper_F_frame)
+                self.change_frame_flag("H_F")
+            else:
+                self.changePage(self.menu_helper_B_frame)
+                self.change_frame_flag("H_B")
+
     '''後方走行時 → メニュー画面 → 走行開始 を選んだ場合も後方カメラ映像を映すための関数'''
     def start_running(self):
         print("走行開始")
         self.control("run")
-        if self.flag == "M_F":
+        if self.flag == "M_F" or self.flag == "H_F":
             self.arg = True
             self.stop_forward_frame.tkraise()
             self.change_frame_flag("S_F")
-        elif self.flag == "M_B":
+        elif self.flag == "M_B" or self.flag == "H_B":
             self.arg = True
             self.stop_back_frame.tkraise()
             self.change_frame_flag("S_B")
