@@ -43,7 +43,15 @@ class MyApp(tk.Tk):
 
         # 前方、後方カメラをオープンする
         self.capture_F = cv2.VideoCapture(1)
-        self.capture_B = cv2.VideoCapture(2)         
+        self.capture_B = cv2.VideoCapture(2)   
+
+        # 速度・検知範囲用のconfigファイル用変数
+        file_path = 'vel_and_detect_range_config.txt' 
+        host = '192.168.1.102' 
+        port = 65432
+
+        self.send_config(file_path, host, port)
+
 
         '''コンフィグレーションファイルからシンボルサイズと透明度を読み込み'''
         self.config = self.read_config('config.txt')
@@ -1049,7 +1057,7 @@ class MyApp(tk.Tk):
 
         #メニュー画面を最前面で表示
         self.menu_frame.tkraise()
-
+        #self.menu_back_frame.tkraise()
         ###シンボルフィードバック用のインスタンス変数を設定
         self.blink_state = False # 点滅の状態を制御するフラグ
         self.blinking_img_id = None
@@ -1652,7 +1660,7 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.id_B_left_diagonal_back, state = 'normal') # 左斜め後移動シンボルを表示
                 self.cvs_back.itemconfigure(self.id_lock_B_left_diagonal_back, state = 'hidden') # 左斜め後移動ロックシンボルを非表示
 
-            # 左斜め後移動シンボルの処理
+            # 後退シンボルの処理
             if laser_msg[6] == True:
                 self.cvs_back.itemconfigure(self.id_back, state = 'hidden') # 後退シンボルを非表示
                 self.cvs_back.itemconfigure(self.id_lock_back, state = 'normal') # 後退ロックシンボルを表示
@@ -1706,8 +1714,8 @@ class MyApp(tk.Tk):
 
     '''文字列送信用の関数'''
     def control(self, data):
-        #time_sta = time.perf_counter()
-
+        #print("GUIデバッグ中")
+        #'''
         HOST='192.168.1.102'
         PORT=12345
         BUFFER=4096
@@ -1725,6 +1733,19 @@ class MyApp(tk.Tk):
             except ConnectionResetError:
                 pass
         buf=self.soc.recv(BUFFER)
+        #'''
+
+    '''configファイル送信用の関数'''
+    def send_config(self, file_path, host, port):
+        # サーバに接続
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((host, port))
+
+            # ファイルを開いて送信
+            with open(file_path, 'rb') as file:
+                data = file.read()
+                s.sendall(data)
+            print("ファイル送信完了")
 
     '''走行指令送信の関数達'''
     def forward(self):
