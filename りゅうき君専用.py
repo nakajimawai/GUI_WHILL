@@ -20,7 +20,7 @@ client_socket_s = None
 
 state_flag = False   #衝突防止動作によってロボットが停止したかどうかを判断するブール値(False：停止, True：動作中)
 
-mode_flag = 'user' # ユーザ操縦モードか介助者操縦モードかを判断するための変数（user：ユーザ操縦モード、helper：介助者操縦モード）
+mode_flag = True # ユーザ操縦モードか介助者操縦モードかを判断するための変数（True：ユーザ操縦モード、False：介助者操縦モード）
 
 class MyApp(tk.Tk):
 
@@ -49,6 +49,13 @@ class MyApp(tk.Tk):
         # 前方、後方カメラをオープンする
         self.capture_F = cv2.VideoCapture(1)
         self.capture_B = cv2.VideoCapture(2)   
+
+        # 速度・検知範囲用のconfigファイル用変数
+        file_path = 'vel_and_detect_range_config.txt' 
+        host = '192.168.1.102' 
+        port = 65432
+
+        self.send_config(file_path, host, port)
 
         '''シンボル画像用意'''
         #コンフィグレーションファイルからシンボル拡大率（W、H）、透明度（ALPHA）を読込
@@ -385,6 +392,8 @@ class MyApp(tk.Tk):
 
     '''文字列送信用'''
     def control(self, data):
+        #print("GUIデバッグ中")
+        #'''
         HOST='192.168.1.102'
         PORT=12345
         BUFFER=4096
@@ -400,6 +409,19 @@ class MyApp(tk.Tk):
             except ConnectionResetError:
                 pass
         buf=self.soc.recv(BUFFER)
+        #'''
+
+    '''configファイル送信用の関数'''
+    def send_config(self, file_path, host, port):
+        # サーバに接続
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((host, port))
+
+            # ファイルを開いて送信
+            with open(file_path, 'rb') as file:
+                data = file.read()
+                s.sendall(data)
+            print("ファイル送信完了")
 
     '''シンボルごとの文字列を文字列送信用の関数controlに送る関数たち'''
     def forward(self):
@@ -413,22 +435,22 @@ class MyApp(tk.Tk):
     def helper(self):
         print("介助者操縦モード")
         global mode_flag
-        mode_flag = "helper"
+        mode_flag = False
         self.control("helper")
 
     def user(self):
         print("ユーザ操縦モード")
         global mode_flag
-        mode_flag = "user"
+        mode_flag = True
         self.control("user")
 
     def menu(self):
         global mode_flag
-        if mode_flag == "user":
+        if mode_flag :
             print("ユーザ操縦モードのメニュー画面へ")
             self.changePage(self.menu_frame)
             self.change_frame_flag("M_F")
-        elif mode_flag == "helper":
+        else:
             print("介助者操縦モードのメニュー画面へ")
             self.changePage(self.menu_helper_F_frame)
             self.change_frame_flag("H_F")
@@ -486,6 +508,7 @@ class MyApp(tk.Tk):
     def lock_symbol(self):
         if not msg_q.empty():   #障害物情報に変化があったとき
             laser_msg = msg_q.get(block=True, timeout=True)
+            
             self.delete_and_paste(laser_msg)
 
             self.str = laser_msg   #遷移後の画面でもシンボルロックするために前回の障害物情報を保持
@@ -513,7 +536,6 @@ class MyApp(tk.Tk):
 '''周辺障害物の情報を受け取る関数'''
 def receive_laser_data():
     global client_socket
-    global mode_flag
     while True:
         try:
             server_address = ('192.168.1.102', 50000)

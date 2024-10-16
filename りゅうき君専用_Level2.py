@@ -50,7 +50,14 @@ class MyApp(tk.Tk):
 
         # 前方、後方カメラをオープンする
         self.capture_F = cv2.VideoCapture(1)
-        self.capture_B = cv2.VideoCapture(2)   
+        self.capture_B = cv2.VideoCapture(2)  
+
+        # 速度・検知範囲用のconfigファイル用変数
+        file_path = 'vel_and_detect_range_config.txt' 
+        host = '192.168.1.102' 
+        port = 65432
+
+        self.send_config(file_path, host, port) 
 
         '''シンボル画像用意'''
         #コンフィグレーションファイルからシンボル拡大率（W、H）、透明度（ALPHA）を読込
@@ -452,7 +459,7 @@ class MyApp(tk.Tk):
             333,
             image = self.img_lock_back_tk,
             anchor = tk.CENTER,
-            tag = "lock_S_F_back"
+            tag = "lock_S_B_back"
         )
 
         '''ロボット操縦シンボル'''
@@ -710,7 +717,8 @@ class MyApp(tk.Tk):
         print("stop_blink")
         #'''
         self.blink_state = False # 現在の点滅を一時停止
-        self.after_cancel(self.blink_job) # 現在のシンボル点滅を停止
+        if self.blink_job is not None: # 既にシンボルが点滅している時
+            self.after_cancel(self.blink_job) # 現在のシンボル点滅を停止
         if self.flag == "S_F": 
             self.cvs_stop_forward.itemconfigure(self.blinking_img_id, state='normal') #点滅してたシンボルを'表示'状態にして点滅停止
         elif self.flag == "S_B": 
@@ -724,7 +732,7 @@ class MyApp(tk.Tk):
         if self.flag == "F" or self.flag == "S_F" or self.flag == "M_F" or self.flag == "H_F":
             ret, data = self.capture_F.read()
     
-        elif self.flag == "B" or self.flag == "S_B" or self.flag == "M_B":
+        elif self.flag == "B" or self.flag == "S_B" or self.flag == "M_B"or self.flag == "H_B":
             ret, data = self.capture_B.read()            
 
         # BGR→RGB変換
@@ -858,6 +866,18 @@ class MyApp(tk.Tk):
                 pass
         buf=self.soc.recv(BUFFER)
         #'''
+
+    '''configファイル送信用の関数'''
+    def send_config(self, file_path, host, port):
+        # サーバに接続
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((host, port))
+
+            # ファイルを開いて送信
+            with open(file_path, 'rb') as file:
+                data = file.read()
+                s.sendall(data)
+            print("ファイル送信完了")
 
     '''フレームごとで映像を表示し続けるために、フラグを変更する関数'''
     def change_frame_flag(self, frame_flag):
