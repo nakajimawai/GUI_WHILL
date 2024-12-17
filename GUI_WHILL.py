@@ -151,7 +151,7 @@ class MyApp(tk.Tk):
         self.img_cw = self.apply_transparency(self.img_cw, self.alpha)
         self.img_cw_tk = ImageTk.PhotoImage(self.img_cw)
         # ccw旋回シンボル
-        self.img_ccw = Image.open('ccw_joy.png')
+        self.img_ccw = Image.open('ccw_joy_bright.png')
         self.img_ccw = self.img_ccw.resize((int(120 * W), int(120 * H)))
         self.img_ccw = self.img_ccw.convert("RGBA")
         self.img_ccw = self.apply_transparency(self.img_ccw, self.alpha)
@@ -206,11 +206,16 @@ class MyApp(tk.Tk):
         self.img_lock_cw = self.apply_transparency(self.img_lock_cw, self.alpha)
         self.img_lock_cw_tk = ImageTk.PhotoImage(self.img_lock_cw)
         # ロックccw旋回シンボル
-        self.img_lock_ccw = Image.open('lock_ccw_joy.png')
+        self.img_lock_ccw = Image.open('lock_ccw_joy_bright.png')
         self.img_lock_ccw = self.img_lock_ccw.resize((int(120 * W), int(120 * H)))
         self.img_lock_ccw = self.img_lock_ccw.convert("RGBA")
         self.img_lock_ccw = self.apply_transparency(self.img_lock_ccw, self.alpha)
         self.img_lock_ccw_tk = ImageTk.PhotoImage(self.img_lock_ccw)
+
+        # 緊急停止画面の画像
+        self.img_EG_stop = Image.open('EG_stop.png')
+        self.img_EG_stop = self.img_EG_stop.resize((1275, 765))
+        self.img_EG_stop_tk = ImageTk.PhotoImage(self.img_EG_stop)
 
         '''シンボルサイズに合わせた配置座標を設定'''
         # 前進と後退シンボルの座標
@@ -1055,13 +1060,34 @@ class MyApp(tk.Tk):
             )
         ''''''
 
+        #-----------------------------emergency_stop_frame------------------------------
+        #緊急停止フレーム作成
+        self.EG_stop_frame = ttk.Frame()
+        self.EG_stop_frame.grid(row=0, column=0, sticky="nsew")
+        ###背景画像用のキャンバス###
+        self.cvs_EG_stop = tk.Canvas(self.EG_stop_frame,width=1275,height=765)
+        self.cvs_EG_stop.place(
+            relx=0,
+            rely=0,
+            bordermode=tk.OUTSIDE
+        )
+        ###画像設置###
+        self.cvs_EG_stop.create_image(
+            0,
+            0,
+            image = self.img_EG_stop_tk,
+            anchor = tk.NW,
+        )
+
+        #------------------------------------------------------------------------------------------
+
         #メニュー画面を最前面で表示
         self.menu_frame.tkraise()
-        #self.menu_back_frame.tkraise()
         ###シンボルフィードバック用のインスタンス変数を設定
         self.blink_state = False # 点滅の状態を制御するフラグ
         self.blinking_img_id = None
         self.blink_job = None
+
 
     '''シンボル画像の余白部分クリックのスルー用関数群'''
     #----------------------------------------------------------------------------
@@ -1492,7 +1518,10 @@ class MyApp(tk.Tk):
             self.cvs_menu_helper_F.tag_lower('background')
         elif self.flag == 'H_B': # 介助者操縦モードの後方メニュー画面
             self.cvs_menu_helper_B.create_image(0,0,anchor='nw',image=self.bg, tag = "background")
-            self.cvs_menu_helper_B.tag_lower('background')            
+            self.cvs_menu_helper_B.tag_lower('background')       
+
+        elif self.flag == 'EG_stop': # 緊急停止中は映像を表示する必要がない
+            pass        
 
         #画像更新のために10msスレッドを空ける
         self.after(10, self.disp_image)
@@ -1505,6 +1534,8 @@ class MyApp(tk.Tk):
     def changePage(self, page):
         self.arg = True
         page.tkraise()   #指定のフレームを最前面に移動
+
+    
 
     '''シンボルロック・アンロック用の関数'''
     
@@ -1693,21 +1724,26 @@ class MyApp(tk.Tk):
                 self.cvs_back.itemconfigure(self.id_lock_B_ccw, state = 'hidden') # ccw旋回ロックシンボルを非表示
 
 
-            
-
-
-    '''衝突防止動作によって停止画面に遷移させるかを判断する関数'''
+    '''衝突防止機能によって停止画面に遷移させるかを判断する関数'''
     def determine_transition(self):
         global state_flag
         if not state_q.empty():
             state_msg = state_q.get(block=True, timeout=True)
-            if not state_msg:
-                if self.flag == "F":
+
+            if state_msg == "EG_stop": # 緊急停止
+                self.changePage(self.EG_stop_frame)
+                self.change_frame_flag("EG_stop")
+
+            elif state_msg == "stop": # 停止
+                if self.flag == "F": 
                     self.changePage(self.stop_forward_frame)
                     self.change_frame_flag("S_F")
                 elif self.flag == "B":
                     self.changePage(self.stop_back_frame)
                     self.change_frame_flag("S_B")
+                elif self.flag == "EG_stop":
+                    self.changePage(self.menu_frame)
+                    self.change_frame_flag("M_F")
             state_q.task_done()
         
         self.after(10, self.determine_transition)
@@ -1719,20 +1755,19 @@ class MyApp(tk.Tk):
         HOST='192.168.1.102'
         PORT=12345
         BUFFER=4096
-            # Define socket communication type ipv4, tcp
+        # Define socket communication type ipv4, tcp
         self.soc=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-            #connect to the server 
+        # connect to the server 
         self.soc.connect((HOST,PORT))
-            #delay
-        #time.sleep(1)
         if data == "exit":
-            pass
+            self.soc.close()
         else:
             try:
                 self.soc.send(data.encode("utf-8"))
+                self.soc.close()
             except ConnectionResetError:
                 pass
-        buf=self.soc.recv(BUFFER)
+        #buf=self.soc.recv(BUFFER)
         #'''
 
     '''configファイル送信用の関数'''
@@ -1865,7 +1900,7 @@ def receive_laser_data():
         except EOFError:
             continue 
 
-'''ロボットの状態を受け取る関数'''
+'''電動車いすの状態を受け取る関数'''
 def receive_state_data():
     global client_socket_s
     while True:
@@ -1873,11 +1908,10 @@ def receive_state_data():
             server_address_s = ('192.168.1.102', 50010)
             client_socket_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client_socket_s.connect(server_address_s)
-            received_data_s = client_socket_s.recv(1)
-            bool_value = struct.unpack('?', received_data_s)[0]
-            print("ロボットの状態", bool_value)
-            #state_flag = bool_value
-            state_q.put(bool_value)
+            received_data_s = client_socket_s.recv(10)
+            received_data_s = received_data_s.decode()
+            print("電動車いすの状態", received_data_s)
+            state_q.put(received_data_s)
             state_q.join()
         except EOFError:
             continue
